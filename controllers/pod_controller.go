@@ -20,6 +20,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,9 +33,12 @@ type PodReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+const (
+	addPodNameLabelAnnotation = "metacode.biz/add-pod-name-label"
+	podNameLabel              = "metacode.biz/pod-name"
+)
+
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core,resources=pods/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -46,9 +50,47 @@ type PodReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	l := log.FromContext(ctx).WithValues("pod", req.NamespacedName)
 
-	// your logic here
+	var pod corev1.Pod
+	if err := r.Get(ctx, req.NamespacedName, &pod); err != nil {
+		if apierrors.IsNotFound(err) {
+			// ok for not-found
+			return ctrl.Result{}, nil
+		}
+		l.Error(err, "unable to fetch Pod")
+		return ctrl.Result{}, err
+	}
+
+	labelShouldBePresent := pod.Annotations[addPodNameLabelAnnotation] == "true"
+	labelIsPresent := pod.Labels[podNameLabel] == pod.Name
+
+	if labelShouldBePresent == labelIsPresent {
+		l.Info("no update required")
+		return ctrl.Result{}, nil
+	}
+
+	if labelShouldBePresent {
+		if pod.Labels == nil {
+			pod.Labels = make(map[string]string)
+		}
+		pod.Labels[podNameLabel] = pod.Name
+		l.Info("adding label")
+	} else {
+		delete(pod.Labels, podNameLabel)
+		l.Info("removing label")
+	}
+
+	if err := r.Update(ctx, &pod); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		l.Error(err, "unable to update Pod")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
