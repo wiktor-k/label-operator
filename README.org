@@ -24,7 +24,7 @@ kubectl annotate pod my-nginx metacode.biz/add-pod-name-label=true
 
 And check the labels:
 
-#+BEGIN_SRC sh
+#+BEGIN_SRC sh :exports both
 kubectl get pod my-nginx --show-labels
 #+END_SRC
 
@@ -40,7 +40,7 @@ kubectl annotate pod my-nginx metacode.biz/add-pod-name-label-
 
 Removes the label too:
 
-#+BEGIN_SRC sh
+#+BEGIN_SRC sh :exports both
 kubectl get pod my-nginx --show-labels
 #+END_SRC
 
