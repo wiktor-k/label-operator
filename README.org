@@ -1,0 +1,5 @@
+#+TITLE: Simple Kubernetes operator
+
+This operator implements an example operator to adjust labels for running pods.
+
+For more details see: https://kubernetes.io/blog/2021/06/21/writing-a-controller-for-pod-labels/
