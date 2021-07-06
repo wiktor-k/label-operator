@@ -2,4 +2,50 @@
 
 This operator implements an example operator to adjust labels for running pods.
 
+Any pod annotated with ~metacode.biz/add-pod-name-label=true~
+annotation will receive a ~metacode.biz/pod-name~ label with the value
+containing the actual pod name.
+
+To deploy it to your current cluster use ~make run~
+
+* Testing
+
+First create a sample pod:
+
+#+BEGIN_SRC sh
+kubectl run --image=nginx my-nginx
+#+END_SRC
+
+Then annotate it:
+
+#+BEGIN_SRC sh
+kubectl annotate pod my-nginx metacode.biz/add-pod-name-label=true
+#+END_SRC
+
+And check the labels:
+
+#+BEGIN_SRC sh
+kubectl get pod my-nginx --show-labels
+#+END_SRC
+
+#+RESULTS:
+| NAME       READY   STATUS    RESTARTS   AGE   LABELS                         |              |
+| my-nginx   1/1     Running   0          11m   metacode.biz/pod-name=my-nginx | run=my-nginx |
+
+Removing the annotation:
+
+#+BEGIN_SRC sh
+kubectl annotate pod my-nginx metacode.biz/add-pod-name-label-
+#+END_SRC
+
+Removes the label too:
+
+#+BEGIN_SRC sh
+kubectl get pod my-nginx --show-labels
+#+END_SRC
+
+#+RESULTS:
+| NAME     | READY | STATUS  | RESTARTS | AGE | LABELS       |
+| my-nginx | 1/1   | Running |        0 | 14m | run=my-nginx |
+
 For more details see: https://kubernetes.io/blog/2021/06/21/writing-a-controller-for-pod-labels/
